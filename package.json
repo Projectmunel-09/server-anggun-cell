@@ -1,0 +1,16 @@
+{
+  "name": "notification-server",
+  "version": "1.0.0",
+  "description": "Anggun Cell Firebase notification server",
+  "main": "watch-transaksi.js",
+  "scripts": {
+    "start": "node watch-transaksi.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "firebase-admin": "^14.2.0"
+  }
+}
