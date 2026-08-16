@@ -1,8 +1,16 @@
-const { initializeApp, cert } = require("firebase-admin/app");
-const { getMessaging } = require("firebase-admin/messaging");
-const { getDatabase } = require("firebase-admin/database");
+const { initializeApp, cert } =
+  require("firebase-admin/app");
 
-const serviceAccount = require("./service-account.json");
+const { getMessaging } =
+  require("firebase-admin/messaging");
+
+const { getDatabase } =
+  require("firebase-admin/database");
+
+const serviceAccount =
+  JSON.parse(
+    process.env.FIREBASE_SERVICE_ACCOUNT
+  );
 
 // ======================================================
 // FIREBASE ADMIN
