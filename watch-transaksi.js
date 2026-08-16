@@ -26,6 +26,33 @@ initializeApp({
 const db = getDatabase();
 const transaksiRef = db.ref("transaksi");
 
+db.ref(".info/connected").on("value", snapshot => {
+
+  if (snapshot.val() === true) {
+
+    console.log(
+      "🟢 FIREBASE REALTIME DATABASE TERHUBUNG"
+    );
+
+  } else {
+
+    console.log(
+      "🔴 FIREBASE REALTIME DATABASE TERPUTUS"
+    );
+
+  }
+
+});
+
+console.log(
+  "🔥 DATABASE URL:",
+  "https://yungscell-default-rtdb.asia-southeast1.firebasedatabase.app"
+);
+
+console.log(
+  "🔥 FIREBASE PROJECT:",
+  serviceAccount.project_id
+);
 // ======================================================
 // KONVERSI JENIS TRANSAKSI
 // ======================================================
@@ -106,94 +133,116 @@ function formatRupiah(nominal) {
 
 async function simpanRiwayatNotifikasi(data, transaksiKey) {
 
-  try {
+  if (!transaksiKey) {
 
-    if (!transaksiKey) {
-
-      console.error(
-        "❌ Key transaksi tidak tersedia"
-      );
-
-      return;
-
-    }
-
-    const jenis =
-      formatJenisTransaksi(data.type);
-
-    const nominalAngka =
-      ambilNominal(data);
-
-    const nominal =
-      formatRupiah(nominalAngka);
-
-    const pesan =
-      `Hei Miknel, ada transaksi baru di Anggun Cell 😊, ${jenis} ${nominal}`;
-
-    const notifRef =
-      db.ref(
-        "notifications/" + transaksiKey
-      );
-
-    // ================================================
-    // CEK APAKAH NOTIFIKASI SUDAH ADA
-    // ================================================
-
-    const snapshot =
-      await notifRef.once("value");
-
-    if (snapshot.exists()) {
-
-      console.log(
-        "⚠ Riwayat notifikasi sudah ada:",
-        transaksiKey
-      );
-
-      return;
-
-    }
-
-    // ================================================
-    // SIMPAN
-    // ================================================
-
-    await notifRef.set({
-
-      judul: "Anggun Cell",
-
-      pesan: pesan,
-
-      jenis: jenis,
-
-      nominal: nominalAngka,
-
-      type: data.type || "",
-
-      tanggal: data.tanggal || "",
-
-      tanggalISO: data.tanggalISO || "",
-
-      dibaca: false,
-
-      createdAt: Date.now(),
-
-      transaksiKey: transaksiKey
-
-    });
-
-    console.log(
-      "✓ Riwayat notifikasi disimpan:",
-      transaksiKey
-    );
-
-  } catch (error) {
-
-    console.error(
-      "❌ Gagal menyimpan riwayat notifikasi:",
-      error
+    throw new Error(
+      "Key transaksi tidak tersedia"
     );
 
   }
+
+  const jenis =
+    formatJenisTransaksi(data.type);
+
+  const nominalAngka =
+    ambilNominal(data);
+
+  const pesan =
+    `Hei Miknel, ada transaksi baru di Anggun Cell 😊, ${jenis} ${formatRupiah(nominalAngka)}`;
+
+  const notifRef =
+    db.ref("notifications/" + transaksiKey);
+
+  console.log("");
+  console.log("========================================");
+  console.log("💾 MENYIMPAN RIWAYAT NOTIFIKASI");
+  console.log("Path :", `notifications/${transaksiKey}`);
+  console.log("========================================");
+
+  // ==========================================
+  // CEK APAKAH SUDAH ADA
+  // ==========================================
+
+  const snapshot =
+    await notifRef.once("value");
+
+  if (snapshot.exists()) {
+
+    console.log(
+      "⚠ Riwayat notifikasi sudah ada:",
+      transaksiKey
+    );
+
+    return;
+
+  }
+
+  // ==========================================
+  // DATA NOTIFIKASI
+  // ==========================================
+
+  const notificationData = {
+
+    judul: "Anggun Cell",
+
+    pesan: pesan,
+
+    jenis: jenis,
+
+    nominal: nominalAngka,
+
+    type: data.type || "",
+
+    tanggal: data.tanggal || "",
+
+    tanggalISO: data.tanggalISO || "",
+
+    dibaca: false,
+
+    createdAt: Date.now(),
+
+    transaksiKey: transaksiKey
+
+  };
+
+  console.log(
+    "Data yang akan disimpan:",
+    notificationData
+  );
+
+  // ==========================================
+  // SIMPAN
+  // ==========================================
+
+  await notifRef.set(notificationData);
+
+  console.log(
+    "✅ SET BERHASIL"
+  );
+
+  // ==========================================
+  // VERIFIKASI ULANG
+  // ==========================================
+
+  const verifySnapshot =
+    await notifRef.once("value");
+
+  if (!verifySnapshot.exists()) {
+
+    throw new Error(
+      `Data tidak ditemukan setelah set(): notifications/${transaksiKey}`
+    );
+
+  }
+
+  console.log(
+    "✅ VERIFIKASI BERHASIL"
+  );
+
+  console.log(
+    "✓ Riwayat notifikasi benar-benar tersimpan:",
+    transaksiKey
+  );
 
 }
 // ======================================================
@@ -432,33 +481,77 @@ async function mulaiWatcher() {
   // MONITOR TRANSAKSI BARU
   // ====================================================
 
-  transaksiRef.on("child_added", async snapshot => {
+transaksiRef.on("child_added", async snapshot => {
 
-    const key = snapshot.key;
+  const key = snapshot.key;
 
-    // Jangan kirim transaksi yang sudah ada saat server mulai
-    if (transaksiSudahAda.has(key)) {
-      return;
-    }
+  // Jangan proses transaksi lama
+  if (transaksiSudahAda.has(key)) {
+    return;
+  }
 
-    // Tandai sebagai sudah diproses
-    transaksiSudahAda.add(key);
+  // Tandai sudah diproses
+  transaksiSudahAda.add(key);
 
-    const data = snapshot.val();
+  const data = snapshot.val();
 
-console.log("");
-console.log("🔔 TRANSAKSI BARU TERDETEKSI");
-console.log("Key :", key);
-console.log("Data:", data);
+  console.log("");
+  console.log("========================================");
+  console.log("🔔 TRANSAKSI BARU TERDETEKSI");
+  console.log("Key :", key);
+  console.log("Data:", data);
+  console.log("========================================");
+  console.log("");
 
-// Simpan ke riwayat notifikasi
+
+  // ======================================================
+  // SIMPAN KE RIWAYAT NOTIFIKASI
+  // ======================================================
+
+  try {
+
+    await simpanRiwayatNotifikasi(
+      data,
+      key
+    );
+
+    console.log(
+      "✓ Riwayat notifikasi berhasil disimpan:",
+      key
+    );
+
+  } catch (error) {
+
+    console.error(
+      "❌ Gagal menyimpan riwayat notifikasi:",
+      error
+    );
+
+  }
 
 
-// Kirim push notification
-await kirimNotifikasi(data);
+  // ======================================================
+  // KIRIM PUSH NOTIFICATION
+  // ======================================================
 
-  });
+  try {
 
+    await kirimNotifikasi(data);
+
+    console.log(
+      "✓ Push notification selesai diproses"
+    );
+
+  } catch (error) {
+
+    console.error(
+      "❌ Gagal mengirim push notification:",
+      error
+    );
+
+  }
+
+});
 }
 
 // ======================================================
