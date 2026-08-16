@@ -99,41 +99,103 @@ function formatRupiah(nominal) {
 // SIMPAN RIWAYAT NOTIFIKASI
 // ======================================================
 
-async function simpanRiwayatNotifikasi(data) {
+// ======================================================
+// SIMPAN RIWAYAT NOTIFIKASI
+// 1 TRANSAKSI = 1 NOTIFIKASI
+// ======================================================
 
-  const jenis = formatJenisTransaksi(data.type);
+async function simpanRiwayatNotifikasi(data, transaksiKey) {
 
-  const nominalAngka = ambilNominal(data);
+  try {
 
-  const nominal = formatRupiah(nominalAngka);
+    if (!transaksiKey) {
 
-  const pesan =
-    `Hei Miknel, ada transaksi baru di Anggun Cell 😊, ${jenis} ${nominal}`;
+      console.error(
+        "❌ Key transaksi tidak tersedia"
+      );
 
-  await db.ref("notifications").push({
+      return;
 
-    judul: "Anggun Cell",
+    }
 
-    pesan: pesan,
+    const jenis =
+      formatJenisTransaksi(data.type);
 
-    jenis: jenis,
+    const nominalAngka =
+      ambilNominal(data);
 
-    nominal: nominalAngka,
+    const nominal =
+      formatRupiah(nominalAngka);
 
-    type: data.type || "",
+    const pesan =
+      `Hei Miknel, ada transaksi baru di Anggun Cell 😊, ${jenis} ${nominal}`;
 
-    tanggal: data.tanggal || "",
+    const notifRef =
+      db.ref(
+        "notifications/" + transaksiKey
+      );
 
-    tanggalISO: data.tanggalISO || "",
+    // ================================================
+    // CEK APAKAH NOTIFIKASI SUDAH ADA
+    // ================================================
 
-    dibaca: false,
+    const snapshot =
+      await notifRef.once("value");
 
-    createdAt: Date.now()
+    if (snapshot.exists()) {
 
-  });
+      console.log(
+        "⚠ Riwayat notifikasi sudah ada:",
+        transaksiKey
+      );
+
+      return;
+
+    }
+
+    // ================================================
+    // SIMPAN
+    // ================================================
+
+    await notifRef.set({
+
+      judul: "Anggun Cell",
+
+      pesan: pesan,
+
+      jenis: jenis,
+
+      nominal: nominalAngka,
+
+      type: data.type || "",
+
+      tanggal: data.tanggal || "",
+
+      tanggalISO: data.tanggalISO || "",
+
+      dibaca: false,
+
+      createdAt: Date.now(),
+
+      transaksiKey: transaksiKey
+
+    });
+
+    console.log(
+      "✓ Riwayat notifikasi disimpan:",
+      transaksiKey
+    );
+
+  } catch (error) {
+
+    console.error(
+      "❌ Gagal menyimpan riwayat notifikasi:",
+      error
+    );
+
+  }
 
 }
-
 // ======================================================
 // KIRIM NOTIFIKASI
 // ======================================================
@@ -147,16 +209,14 @@ async function kirimNotifikasi(data) {
   const body =
     `Hei Miknel, ada transaksi baru di Anggun Cell 😊, ${jenis} ${nominal}`;
 
-    // Simpan ke riwayat notifikasi
-await simpanRiwayatNotifikasi(data);
-
   try {
 
     // ================================================
     // AMBIL SEMUA DEVICE YANG AKTIF
     // ================================================
 
-    const snapshot = await db.ref("deviceTokens").once("value");
+    const snapshot =
+      await db.ref("deviceTokens").once("value");
 
     const tokens = [];
 
@@ -169,7 +229,9 @@ await simpanRiwayatNotifikasi(data);
         device.aktif === true &&
         device.token
       ) {
+
         tokens.push(device.token);
+
       }
 
     });
@@ -390,7 +452,7 @@ console.log("Key :", key);
 console.log("Data:", data);
 
 // Simpan ke riwayat notifikasi
-await simpanRiwayatNotifikasi(data);
+
 
 // Kirim push notification
 await kirimNotifikasi(data);
