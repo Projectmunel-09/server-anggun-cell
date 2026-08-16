@@ -384,12 +384,16 @@ async function mulaiWatcher() {
 
     const data = snapshot.val();
 
-    console.log("");
-    console.log("🔔 TRANSAKSI BARU TERDETEKSI");
-    console.log("Key :", key);
-    console.log("Data:", data);
+console.log("");
+console.log("🔔 TRANSAKSI BARU TERDETEKSI");
+console.log("Key :", key);
+console.log("Data:", data);
 
-    await kirimNotifikasi(data);
+// Simpan ke riwayat notifikasi
+await simpanRiwayatNotifikasi(data);
+
+// Kirim push notification
+await kirimNotifikasi(data);
 
   });
 
